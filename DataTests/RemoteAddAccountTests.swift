@@ -18,8 +18,7 @@ class RemoteAddAccount {
     }
     
     func add(account: AddAccountModel) {
-        let data = try? JSONEncoder().encode(account)
-        httpClient.post(to: self.url, with: data)
+        httpClient.post(to: self.url, with: account.toData())
     }
 }
 
@@ -47,13 +46,12 @@ class RemoteAddAccountTests: XCTestCase {
     func test_add_shouldCallHttpClientWith_correct_data() throws {
         // GIVEN
         let (sut, httpClientSpy) = makeSut()
-        let mockData = try? JSONEncoder().encode(mockAccountModel)
         
         // WHEN
         sut.add(account: mockAccountModel)
         
         // THEN
-        XCTAssertEqual(httpClientSpy.data, mockData)
+        XCTAssertEqual(httpClientSpy.data, mockAccountModel.toData())
     }
 
     // MARK: - Unusual Behaviors
@@ -73,14 +71,13 @@ class RemoteAddAccountTests: XCTestCase {
     func test_add_shouldCallHttpClientWith_diff_data() throws {
         // GIVEN
         let (sut, httpClientSpy) = makeSut()
-        let originalData = try? JSONEncoder().encode(mockAccountModel)
         let wrongMock = AddAccountModel(name: "wrong", email: "wrong@wrong.com", password: "wrong", passwordConfirmation: "wrong")
         
         // WHEN
         sut.add(account: wrongMock)
         
         // THEN
-        XCTAssertNotEqual(httpClientSpy.data, originalData)
+        XCTAssertNotEqual(httpClientSpy.data, mockAccountModel.toData())
     }
     
 }

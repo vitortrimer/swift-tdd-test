@@ -18,3 +18,8 @@ public struct AddAccountModel: Encodable {
     var passwordConfirmation: String
 }
 
+public extension AddAccountModel {
+    func toData() -> Data? {
+        return try? JSONEncoder().encode(self)
+    }
+}
