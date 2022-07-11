@@ -6,6 +6,7 @@
 //
 
 import XCTest
+@testable import Domain
 
 class RemoteAddAccount {
     private let url: URL
@@ -16,35 +17,92 @@ class RemoteAddAccount {
         self.httpClient = httpClient
     }
     
-    func add() {
-        httpClient.post(url: self.url)
+    func add(account: AddAccountModel) {
+        let data = try? JSONEncoder().encode(account)
+        httpClient.post(to: self.url, with: data)
     }
 }
 
 protocol HttpPostClient {
-    func post(url: URL)
+    func post(to url: URL, with data: Data?)
 }
 
 class RemoteAddAccountTests: XCTestCase {
+    let mockAccountModel = AddAccountModel(name: "name", email: "unit@test.com", password: "password", passwordConfirmation: "password")
+    
+    // MARK: - Usual Behaviors
+    
+    func test_add_shouldCallHttpClientWith_correct_url() throws {
+        // GIVEN
+        let url = URL(string: "https://any-url.com")!
+        let (sut, httpClientSpy) = makeSut()
+        
+        // WHEN
+        sut.add(account: mockAccountModel)
+        
+        // THEN
+        XCTAssertEqual(httpClientSpy.url, url)
+    }
+    
+    func test_add_shouldCallHttpClientWith_correct_data() throws {
+        // GIVEN
+        let (sut, httpClientSpy) = makeSut()
+        let mockData = try? JSONEncoder().encode(mockAccountModel)
+        
+        // WHEN
+        sut.add(account: mockAccountModel)
+        
+        // THEN
+        XCTAssertEqual(httpClientSpy.data, mockData)
+    }
 
-    func test_add_shouldCallHttpClient_withCorrectUrl() throws {
+    // MARK: - Unusual Behaviors
+    func test_add_shouldCallHttpClientWith_incorrect_url() throws {
+        // GIVEN
         let url = URL(string: "https://any-url.com")!
         let httpClientSpy = HttpClientSpy()
-        let sut = RemoteAddAccount(url: url, httpClient: httpClientSpy)
-        sut.add()
+        let sut = RemoteAddAccount(url: URL(string: "https://any-url-incorrect.com")!, httpClient: httpClientSpy)
         
-        XCTAssertEqual(httpClientSpy.url, url)
+        // WHEN
+        sut.add(account: mockAccountModel)
+        
+        // THEN
+        XCTAssertNotEqual(httpClientSpy.url, url)
+    }
+    
+    func test_add_shouldCallHttpClientWith_diff_data() throws {
+        // GIVEN
+        let (sut, httpClientSpy) = makeSut()
+        let originalData = try? JSONEncoder().encode(mockAccountModel)
+        let wrongMock = AddAccountModel(name: "wrong", email: "wrong@wrong.com", password: "wrong", passwordConfirmation: "wrong")
+        
+        // WHEN
+        sut.add(account: wrongMock)
+        
+        // THEN
+        XCTAssertNotEqual(httpClientSpy.data, originalData)
     }
     
 }
 
 extension RemoteAddAccountTests {
+    func makeSut(url: URL = URL(string: "https://any-url.com")!) -> (sut: RemoteAddAccount, httpCleintSpy: HttpClientSpy) {
+        let httpClientSpy = HttpClientSpy()
+        let sut = RemoteAddAccount(url: url, httpClient: httpClientSpy)
+        return (sut, httpClientSpy)
+    }
+    
+    func makeAddAccountModel() -> AddAccountModel {
+        return AddAccountModel(name: "name", email: "unit@test.com", password: "password", passwordConfirmation: "password")
+    }
     
     class HttpClientSpy: HttpPostClient {
         var url: URL?
+        var data: Data?
         
-        func post(url: URL) {
+        func post(to url: URL, with data: Data?) {
             self.url = url
+            self.data = data
         }
     }
     
